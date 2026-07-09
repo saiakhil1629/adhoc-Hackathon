@@ -82,7 +82,11 @@ const Login = () => {
           </h3>
 
           {authError && (
-            <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/25 rounded-2xl flex items-start space-x-3 text-rose-200 text-sm">
+            <div className={`mb-6 p-4 border rounded-2xl flex items-start space-x-3 text-sm ${
+              authError.includes('Account created')
+                ? 'bg-blue-500/10 border-blue-500/25 text-blue-200'
+                : 'bg-rose-500/10 border-rose-500/25 text-rose-200'
+            }`}>
               <FiAlertCircle className="mt-0.5 flex-shrink-0" size={18} />
               <span>{authError}</span>
             </div>

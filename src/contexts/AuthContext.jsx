@@ -9,23 +9,14 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      if (isMockMode) {
-        const { data } = await mockDB.auth.getUser();
-        setUser(data.user);
+      try {
+        const session = localStorage.getItem('tt_session');
+        const userObj = (session && session !== 'null') ? JSON.parse(session) : null;
+        setUser(userObj);
+      } catch (e) {
+        console.error('Error loading session from localStorage', e);
+      } finally {
         setLoading(false);
-      } else {
-        // Get initial session
-        const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
-        setLoading(false);
-
-        // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-          setUser(session?.user ?? null);
-          setLoading(false);
-        });
-
-        return () => subscription.unsubscribe();
       }
     };
 
@@ -41,10 +32,35 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         return { user: data.user, error: null };
       } else {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        // Query custom hr_admins table
+        const { data, error } = await supabase
+          .from('hr_admins')
+          .select('*')
+          .eq('email', email)
+          .eq('password', password)
+          .maybeSingle();
+
         if (error) throw error;
-        setUser(data.user);
-        return { user: data.user, error: null };
+
+        if (!data) {
+          return { user: null, error: { message: 'Invalid email or password.' } };
+        }
+
+        if (!data.is_approved) {
+          return { user: null, error: { message: 'Your account is pending database admin approval. Please set is_approved to TRUE in Supabase.' } };
+        }
+
+        // Successfully logged in via custom admins database
+        const hrUser = { 
+          id: data.id, 
+          email: data.email, 
+          role: 'HR Admin', 
+          user_metadata: { name: data.name } 
+        };
+
+        localStorage.setItem('tt_session', JSON.stringify(hrUser));
+        setUser(hrUser);
+        return { user: hrUser, error: null };
       }
     } catch (error) {
       setLoading(false);
@@ -63,18 +79,32 @@ export const AuthProvider = ({ children }) => {
         setUser(data.user);
         return { user: data.user, error: null };
       } else {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name: name
-            }
+        // Register account in hr_admins as pending (is_approved = false)
+        const { data, error } = await supabase
+          .from('hr_admins')
+          .insert([{ 
+            name, 
+            email, 
+            password, 
+            is_approved: false // Admin must approve in Supabase
+          }])
+          .select()
+          .single();
+
+        if (error) {
+          if (error.code === '23505') {
+            throw new Error('An administrator account with this email already exists.');
           }
-        });
-        if (error) throw error;
-        setUser(data.user);
-        return { user: data.user, error: null };
+          throw error;
+        }
+
+        // Account registered successfully, return a clean message
+        return { 
+          user: null, 
+          error: { 
+            message: `Account created! Access is pending database admin approval. Please set 'is_approved' to true for '${email}' in your Supabase 'hr_admins' table.` 
+          } 
+        };
       }
     } catch (error) {
       setLoading(false);
@@ -87,11 +117,7 @@ export const AuthProvider = ({ children }) => {
   const logout = async () => {
     setLoading(true);
     try {
-      if (isMockMode) {
-        await mockDB.auth.signOut();
-      } else {
-        await supabase.auth.signOut();
-      }
+      localStorage.setItem('tt_session', 'null');
       setUser(null);
     } catch (error) {
       console.error('Logout error', error);
