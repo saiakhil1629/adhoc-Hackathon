@@ -51,7 +51,7 @@ const Hackathons = () => {
       const branches = [...prev[year].branches];
       branches.splice(index, 1);
       return {
-        ...prev[year],
+        ...prev,
         [year]: {
           ...prev[year],
           branches
