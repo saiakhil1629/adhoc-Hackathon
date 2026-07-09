@@ -1,34 +1,55 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { FiMail, FiLock, FiAlertCircle } from 'react-icons/fi';
+import { FiMail, FiLock, FiAlertCircle, FiUser } from 'react-icons/fi';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-toastify';
 
 const Login = () => {
-  const { login } = useAuth();
+  const { login, registerUser } = useAuth();
   const navigate = useNavigate();
+  const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState('');
   
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, formState: { errors } } = useForm({
     defaultValues: {
-      email: 'admin@aditya.ac.in', // Convenient default credentials for the HR Admin
+      name: '',
+      email: 'admin@aditya.ac.in',
       password: 'password123'
     }
   });
+
+  const handleToggleMode = () => {
+    setIsSignUp(prev => !prev);
+    setAuthError('');
+    reset();
+  };
 
   const onSubmit = async (data) => {
     setLoading(true);
     setAuthError('');
     try {
-      const { user, error } = await login(data.email, data.password);
-      if (error) {
-        setAuthError(error.message);
-        toast.error(error.message || 'Login failed');
+      if (isSignUp) {
+        // Registering a new HR Admin
+        const { user, error } = await registerUser(data.name, data.email, data.password);
+        if (error) {
+          setAuthError(error.message);
+          toast.error(error.message || 'Registration failed');
+        } else {
+          toast.success(`Admin account created for ${data.name}! Welcome.`);
+          navigate('/');
+        }
       } else {
-        toast.success(`Welcome back, ${user.user_metadata?.name || 'HR Admin'}!`);
-        navigate('/');
+        // Logging in
+        const { user, error } = await login(data.email, data.password);
+        if (error) {
+          setAuthError(error.message);
+          toast.error(error.message || 'Login failed');
+        } else {
+          toast.success(`Welcome back, ${user.user_metadata?.name || 'HR Admin'}!`);
+          navigate('/');
+        }
       }
     } catch (e) {
       setAuthError('An unexpected error occurred. Please try again.');
@@ -54,9 +75,11 @@ const Login = () => {
           <p className="mt-2 text-sm text-slate-400">HR Admin Portal • Aditya Group of Campuses</p>
         </div>
 
-        {/* Login Card */}
+        {/* Auth Card */}
         <div className="glass bg-slate-900/60 border border-white/5 rounded-3xl p-8 shadow-2xl relative">
-          <h3 className="text-lg font-bold text-white mb-6">Sign In</h3>
+          <h3 className="text-lg font-bold text-white mb-6">
+            {isSignUp ? 'Create Admin Account' : 'Sign In'}
+          </h3>
 
           {authError && (
             <div className="mb-6 p-4 bg-rose-500/10 border border-rose-500/25 rounded-2xl flex items-start space-x-3 text-rose-200 text-sm">
@@ -66,6 +89,28 @@ const Login = () => {
           )}
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            {isSignUp && (
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-slate-505">
+                    <FiUser size={16} />
+                  </span>
+                  <input
+                    type="text"
+                    placeholder="e.g. Akhil"
+                    {...register("name", { required: "Full Name is required" })}
+                    className="w-full pl-11 pr-4 py-3 bg-slate-950/50 border border-white/5 rounded-2xl text-sm outline-none text-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 transition-all placeholder:text-slate-650"
+                  />
+                </div>
+                {errors.name && (
+                  <p className="mt-1.5 text-xs text-rose-450 font-semibold">{errors.name.message}</p>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
                 Email Address
@@ -126,13 +171,18 @@ const Login = () => {
               {loading ? (
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
-                "Sign In"
+                isSignUp ? "Sign Up" : "Sign In"
               )}
             </button>
           </form>
           
-          <div className="mt-6 text-center text-xs text-slate-500">
-            Forgot password? Contact system administrator.
+          <div className="mt-6 text-center text-xs">
+            <button 
+              onClick={handleToggleMode}
+              className="text-primary-400 hover:text-primary-300 font-semibold hover:underline"
+            >
+              {isSignUp ? 'Already have an account? Sign In' : 'Need a new HR Admin login? Sign Up here'}
+            </button>
           </div>
         </div>
       </div>

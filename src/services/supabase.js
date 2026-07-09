@@ -172,6 +172,15 @@ export const mockDB = {
       }
       return { data: null, error: { message: 'Invalid credentials. Password must be at least 6 characters.' } };
     },
+    signUp: async (email, password, options) => {
+      if (email && password.length >= 6) {
+        const name = options?.data?.name || 'HR Admin';
+        const user = { id: crypto.randomUUID(), email, role: 'HR Admin', user_metadata: { name } };
+        localStorage.setItem('tt_session', JSON.stringify(user));
+        return { data: { user, session: { access_token: 'mock-token-abc' } }, error: null };
+      }
+      return { data: null, error: { message: 'Password must be at least 6 characters.' } };
+    },
     signOut: async () => {
       localStorage.setItem('tt_session', 'null');
       return { error: null };

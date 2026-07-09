@@ -54,6 +54,36 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const registerUser = async (name, email, password) => {
+    setLoading(true);
+    try {
+      if (isMockMode) {
+        const { data, error } = await mockDB.auth.signUp(email, password, { data: { name } });
+        if (error) throw error;
+        setUser(data.user);
+        return { user: data.user, error: null };
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name: name
+            }
+          }
+        });
+        if (error) throw error;
+        setUser(data.user);
+        return { user: data.user, error: null };
+      }
+    } catch (error) {
+      setLoading(false);
+      return { user: null, error };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     setLoading(true);
     try {
@@ -74,6 +104,7 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
+    registerUser,
     logout,
     isAuthenticated: !!user
   };
