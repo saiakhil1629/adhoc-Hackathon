@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
-import { FiPlus, FiTrash, FiX, FiCalendar, FiMapPin, FiPhone, FiUser, FiInfo } from 'react-icons/fi';
+import { FiPlus, FiTrash, FiX, FiCalendar, FiMapPin, FiPhone, FiUser, FiInfo, FiAward } from 'react-icons/fi';
 import { useApp } from '../contexts/AppContext';
 import { hackathonService } from '../services/dbServices';
 import Table from '../components/Table';
