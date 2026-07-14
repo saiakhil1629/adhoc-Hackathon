@@ -149,9 +149,14 @@ export const hackathonService = {
         trainer: a.trainers
       })) || [];
 
+      const formattedYears = data.hackathon_years?.map(y => ({
+        ...y,
+        branches: y.hackathon_branches || []
+      })) || [];
+
       return {
         ...data,
-        years: data.hackathon_years || [],
+        years: formattedYears,
         allocations: formattedAllocations
       };
     }
